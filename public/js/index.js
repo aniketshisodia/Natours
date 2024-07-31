@@ -6,10 +6,10 @@ const userPasswordForm = document.querySelector('.form-user-password');
 
 const login = async (email, password) => {
     try {
-        console.log(email, password);
+        // console.log(email, password);
         const res = await axios({
             method: 'POST',
-            url: 'http://127.0.0.1:3000/api/v1/users/login',
+            url: '/api/v1/users/login',
             data: {
                 email,
                 password
@@ -53,7 +53,7 @@ const hideAlert = () => {
 }
 
 const showAlert = (type, msg) => {
-    console.log('hide alert');
+    // console.log('hide alert');
     hideAlert();
     const markUp = `<div class="alert alert--${type}">${msg}</div>`;
     document.querySelector('body').insertAdjacentHTML('afterbegin', markUp);
@@ -72,7 +72,7 @@ const logout = async () => {
     try {
         const res = await axios({
             method: 'GET',
-            url: 'http://127.0.0.1:3000/api/v1/users/logout'
+            url: '/api/v1/users/logout'
         });
         if (res.data.status = 'success') {
             location.reload(true);
@@ -135,7 +135,7 @@ if (userPasswordForm) {
 // type is either password or data {email or name }
 const updateSettings = async (data, type) => {
     try {
-        const url = type === 'password' ? 'http://127.0.0.1:3000/api/v1/users/updateMyPassword' : 'http://127.0.0.1:3000/api/v1/users/updateMe';
+        const url = type === 'password' ? '/api/v1/users/updateMyPassword' : 'http://127.0.0.1:3000/api/v1/users/updateMe';
         const res = await axios({
             method: 'PATCH',
             url,
