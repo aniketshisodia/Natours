@@ -1,30 +1,28 @@
 const AppError = require('../appError');
 
-const handleJWTError = err => new AppError('Inavlid Token Please Login Again', 401);
+const handleJWTError = () => new AppError('Invalid Token. Please Login Again', 401);
 
-const handleJWTExpiredWrror = () => new AppError('Your token has expired! Please Login Again');
+const handleJWTExpiredError = () => new AppError('Your token has expired! Please Login Again', 401);
 
 const handleCastErrorDB = err => {
-    const message = `Inavlid ${err.path} : ${err.value}`;
-    return new AppError(message, 404);
-}
+    const message = `Invalid ${err.path} : ${err.value}`;
+    return new AppError(message, 400); // Changed to 400 for invalid input
+};
 
 const handleDuplicateFields = err => {
     const value = err.message.match(/(["'])(\\?.)*\1/g);
-    // console.log('\n' + value);
-    const message = `Duplicate field value ${value}: please use different value`;
-    return new AppError(message, 404);
-}
+    const message = `Duplicate field value ${value}: please use a different value`;
+    return new AppError(message, 400); // Changed to 400 for bad request
+};
 
 const handleValidationError = err => {
-    console.log('Kashish Soda is here');
-    // const errors = Object.values(err.error).map(el => el.message);
     const message = `Invalid input data`;
     return new AppError(message, 400);
-}
+};
 
 const sendErrorDev = (err, req, res) => {
-    // API
+    if (res.headersSent) return; // Avoid sending headers if already sent
+
     if (req.originalUrl.startsWith('/api')) {
         res.status(err.statusCode).json({
             status: err.status,
@@ -32,72 +30,61 @@ const sendErrorDev = (err, req, res) => {
             message: err.message,
             stack: err.stack
         });
-    }
-    //RENDERED WEBSITE
-    else {
+    } else {
         res.status(err.statusCode).render('error', {
-            title: 'Someting went wrong',
+            title: 'Something went wrong',
             msg: err.message
         });
     }
-}
+};
 
-const sendErrorProd = (err, res) => {
-    // API 's
+const sendErrorProd = (err, req, res) => {
+    if (res.headersSent) return; // Avoid sending headers if already sent
+
     if (req.originalUrl.startsWith('/api')) {
         if (err.isOperational) {
             res.status(err.statusCode).json({
                 status: err.status,
                 message: err.message,
             });
-        }
-        else {
+        } else {
             console.error('🎃  ERROR  🎃');
-            // console.log(err);
-            res.status(err.statusCode).json({
-                status: err.status,
-                message: 'Someting went wrong',
+            res.status(500).json({
+                status: 'error',
+                message: 'Something went wrong',
             });
         }
-    }
-    //RENDERED WEBSITE
-    else {
+    } else {
         if (err.isOperational) {
             res.status(err.statusCode).render('error', {
-                title: 'Someting went wrong',
+                title: 'Something went wrong',
                 msg: err.message
             });
-        }
-        else {
+        } else {
             console.error('🎃  ERROR  🎃');
-            // console.log(err);
-            res.status(err.statusCode).json({
-                status: err.status,
-                message: 'Someting went wrong',
+            res.status(500).render('error', {
+                title: 'Something went wrong',
+                msg: 'Please try again later.'
             });
         }
     }
-}
+};
 
-module.exports = ((err, req, res, next) => {
+module.exports = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
     if (process.env.NODE_ENV === 'development') {
-        let error = { ...err };
-        console.log(error);
         sendErrorDev(err, req, res);
-    }
-    else if (process.env.NODE_ENV === 'production') {
+    } else if (process.env.NODE_ENV === 'production') {
         let error = { ...err };
-        console.log('\n\n\n' + error._message + '\n');
 
         if (error._message === 'Validation failed') error = handleValidationError(error);
-        if (error.name === 'CastError') error = handleCastErrorDB(err);
-        if (error.code === 11000) error = handleDuplicateFields(err);
-        if (error.name === 'JsonWebTokenError') error = handleJWTError(err);
-        if (error.name === 'TokenExpiredError') error = handleJWTExpiredWrror();
+        if (error.name === 'CastError') error = handleCastErrorDB(error);
+        if (error.code === 11000) error = handleDuplicateFields(error);
+        if (error.name === 'JsonWebTokenError') error = handleJWTError();
+        if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
 
-        sendErrorProd(error, res);
+        sendErrorProd(error, req, res);
     }
-});
+};
